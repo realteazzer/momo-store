@@ -1,0 +1,25 @@
+backend:
+  port: 8081
+  image:
+    repository: gitlab.praktikum-services.ru:5050/std-015-33/momo-store/momo-backend
+    tag: latest
+    imagePullPolicy: Always
+  replicas: 2
+  revisionHistoryLimit: 15
+  rollingUpdate:
+    maxUnavailable: 1
+    maxSurge: 20%
+     
+frontend:
+  port: 80
+  host: "pelmeni.teazzer.site"
+  configName: nginx-conf
+  replicas: 1
+  revisionHistoryLimit: 15
+  image:
+    repository: gitlab.praktikum-services.ru:5050/std-015-33/momo-store/momo-frontend
+    tag: latest
+    imagePullPolicy: Always
+  proxy:
+    host: backend
+    port: 8081

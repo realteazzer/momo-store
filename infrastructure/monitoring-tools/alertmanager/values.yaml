@@ -1,0 +1,4 @@
+---
+bot_token: 'xxxx:xxxxx'
+chat_id: 'xxx'
+host: "alertmanager.teazzer.site"

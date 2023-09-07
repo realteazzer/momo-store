@@ -1,0 +1,19 @@
+stages:
+    - deploy
+
+deploy:
+    stage: deploy
+    when: manual
+    image:
+        name: bitnami/kubectl:latest
+        entrypoint: ['']
+    script:
+        - echo "${KUBECONF}" | base64 --decode > ~/.kube/config
+        - kubectl apply -f kubernetes/ingress.yaml
+        - kubectl apply -f infrastructure/kubernetes/backend
+        - kubectl apply -f infrastructure/kubernetes/frontend
+        - rm -f ~/.kube/config
+    environment:
+      name: momo-store
+      url: https://pelmeni.teazzer.site/
+

@@ -1,0 +1,23 @@
+include:
+  - local: 'templates/template.yml'
+
+stages:
+    - upload
+    - deploy
+
+variables:
+  VERSION: 0.1.${CI_PIPELINE_ID}
+  
+upload-helm:
+    stage: upload
+    image: alpine/helm:latest
+    script:
+        - helm package infrastructure/helm/ --version ${VERSION}
+        - curl -v -u "${NEXUS_REPO_USER}:${NEXUS_REPO_PASS}" --upload-file momo-store-${VERSION}.tgz ${NEXUS_HELM_REPO} 
+
+deploy-from-helm:
+    extends: 
+        - .deploy-from-helm
+    environment:
+      name: momo-store
+      url: https://pelmeni.teazzer.site/

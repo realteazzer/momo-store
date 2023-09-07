@@ -1,0 +1,12 @@
+apiVersion: v2 # версия api чарта
+type: application
+description: Momo store Helm Chart  # Описание приложения в одном предложении
+name: momo-store # имя чарта
+appVersion: "latest"
+version: 0.1.0 # версия чарта, должна быть по SemVer2
+dependencies:
+  - name: backend
+    version: 0.1.0
+  - name: frontend
+    version: 0.1.0
+

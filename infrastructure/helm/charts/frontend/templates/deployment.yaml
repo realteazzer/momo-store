@@ -1,0 +1,50 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
+  replicas: {{ .Values.replicas }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+        app.kubernetes.io/name: {{ .Chart.Name }}
+        app.kubernetes.io/instance: "{{ .Release.Name }}"
+        app.kubernetes.io/version: "{{ .Chart.AppVersion }}"
+        app.kubernetes.io/managed-by: "{{ .Release.Service }}"
+        helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+        app.kubernetes.io/component: {{ .Chart.Name }}
+        app.kubernetes.io/part-of: momo-store
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.imagePullPolicy }}
+          ports:
+            - name: {{ .Chart.Name }}
+              containerPort: {{ .Values.port }}
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d/
+              readOnly: True
+            - name: docker-sock-volume
+              mountPath: /tmp/docker.sock
+      volumes:
+        - name: docker-sock-volume
+          hostPath:
+            path: /var/run/docker.sock
+        - name: nginx-conf
+          configMap:
+            name: nginx-conf
+
+      imagePullSecrets:
+        - name: docker-config-secret      
+      

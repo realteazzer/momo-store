@@ -1,0 +1,86 @@
+include:
+  - local: 'templates/template.yml'
+  - template: Security/SAST.gitlab-ci.yml
+  - project: 'templates/ci'
+    file: 'DockerInDockerTemplate.yml'
+
+variables:
+  VERSION: 0.1.${CI_PIPELINE_ID}
+  SAST_EXCLUDED_ANALYZERS: "gosec-sast"
+stages:
+  - build-code
+  - build-docker
+  - test
+  - release
+  - deploy
+
+build-code-job:
+  stage: build-code
+  variables:
+    NODE_ENV: '/'
+    VUE_APP_API_URL: '/'
+  script:
+    - cd momo-store-app/frontend
+    - npm install --cache .npm --prefer-offline
+    - npm run build
+    - mkdir -p $CI_PROJECT_DIR/momo-store-app/frontend/momo-store-${VERSION} 
+    - mv dist $CI_PROJECT_DIR/momo-store-app/frontend/momo-store-${VERSION}/public_html
+  cache:
+    key: $CI_COMMIT_REF_SLUG
+    paths:
+      - momo-store-app/frontend/.npm/
+  artifacts:
+    paths:
+      - $CI_PROJECT_DIR/momo-store-app/frontend/momo-store-${VERSION}/public_html
+
+build-frontend-docker:
+  stage: build-docker
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+    - cp -R $CI_PROJECT_DIR/momo-store-app/frontend/momo-store-${VERSION}/public_html momo-store-app/frontend/
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"${CI_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${CI_REGISTRY_USER}" "${CI_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    - >-
+      /kaniko/executor
+      --context $CI_PROJECT_DIR/momo-store-app/frontend
+      --dockerfile $CI_PROJECT_DIR/momo-store-app/frontend/Dockerfile
+      --destination ${CI_REGISTRY_IMAGE}/momo-frontend:${VERSION}
+      --build-arg VERSION=${VERSION}
+      --cache=true
+      --cache-copy-layers
+
+sonarqube-frontend-sast:
+  stage: test
+  image: sonarsource/sonar-scanner-cli:latest
+  variables:
+    GIT_DEPTH: "0"
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+  script:
+    - cd momo-store-app/frontend
+    - sonar-scanner -Dsonar.qualitygate.wait=true -Dsonar.host.url=${SONAR_URL} -Dsonar.login=${SONAR_LOGIN} -Dsonar.projectKey=${SONAR_FRONTEND_KEY} -Dsonar.scm.disabled=true
+  allow_failure: true
+
+upload-frontend-latest:
+  variables:
+    GIT_STRATEGY: none
+  image: docker:20.10.12-dind-rootless
+  stage: release
+  before_script:
+    - until docker info; do sleep 1; done
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - docker pull $CI_REGISTRY_IMAGE/momo-frontend:$VERSION
+    - docker tag $CI_REGISTRY_IMAGE/momo-frontend:$VERSION $CI_REGISTRY_IMAGE/momo-frontend:latest
+    - docker push $CI_REGISTRY_IMAGE/momo-frontend:latest
+
+deploy-from-helm:
+    extends: 
+        - .deploy-from-helm
+    environment:
+      name: momo-store
+      url: https://pelmeni.teazzer.site/

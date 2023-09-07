@@ -1,0 +1,32 @@
+stages:
+  - downstream-pipelines
+
+frontend:
+  stage: downstream-pipelines
+  trigger:
+    include:
+      - "/momo-store-app/frontend/.gitlab-ci.yml"
+    strategy: depend
+  only:
+    changes:
+      - frontend/**/*
+
+backend:
+  stage: downstream-pipelines
+  trigger:
+    include:
+      - "/momo-store-app/backend/.gitlab-ci.yml"
+    strategy: depend
+  only:
+    changes:
+      - backend/**/*
+
+helm:
+  stage: downstream-pipelines
+  trigger:
+    include:
+      - "/infrastructure/helm/.gitlab-ci.yml"
+    strategy: depend
+  only:
+    changes:
+      - helm/**/*

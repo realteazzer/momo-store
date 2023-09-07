@@ -1,0 +1,11 @@
+.deploy-from-helm:
+    stage: deploy
+    when: manual
+    image: alpine/k8s:1.27.3
+    script: 
+        - echo "${KUBECONF}" | base64 -d > ~/kubeconfig
+        - export KUBECONFIG=~/kubeconfig
+        - helm repo add --pass-credentials --username ${NEXUS_REPO_USER} --password ${NEXUS_REPO_PASS} nexus $NEXUS_HELM_REPO
+        - helm repo update
+        - helm upgrade --install momo-store nexus/momo-store --namespace momo-store --create-namespace 
+        - rm -f ~/kubeconfig
